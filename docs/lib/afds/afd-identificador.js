@@ -1,40 +1,31 @@
-const { afdIdentificador } = require('./afdIdentificador');
+function afdIdentificador(input) {
+  let state = "q0";
+  let pos = 0;
 
-describe("AFD Identificador / Palavra-chave", () => {
+  while (pos < input.length) {
+    let c = input[pos];
 
-  test("Identificador válido simples", () => {
-    expect(afdIdentificador("teste")).toEqual({ type: "ID", value: "teste" });
-  });
+    switch (state) {
+      case "q0":
+        if (/[a-zA-Z_]/.test(c)) state = "q_id";
+        else return null; // rejeita
+        break;
 
-  test("Identificador com underscore", () => {
-    expect(afdIdentificador("_var")).toEqual({ type: "ID", value: "_var" });
-  });
+      case "q_id":
+        if (/[a-zA-Z0-9_]/.test(c)) state = "q_id";
+        else return null;
+        break;
+    }
+    pos++;
+  }
 
-  test("Identificador com números no meio/final", () => {
-    expect(afdIdentificador("var123")).toEqual({ type: "ID", value: "var123" });
-    expect(afdIdentificador("var_123")).toEqual({ type: "ID", value: "var_123" });
-  });
+  // Palavras-chave reservadas
+  let keywords = ["if", "else", "while", "return", "function"];
+  if (keywords.includes(input)) return { type: "KW", value: input };
 
-  test("Palavras-chave válidas", () => {
-    expect(afdIdentificador("if")).toEqual({ type: "KW", value: "if" });
-    expect(afdIdentificador("else")).toEqual({ type: "KW", value: "else" });
-    expect(afdIdentificador("while")).toEqual({ type: "KW", value: "while" });
-    expect(afdIdentificador("return")).toEqual({ type: "KW", value: "return" });
-    expect(afdIdentificador("function")).toEqual({ type: "KW", value: "function" });
-  });
+  return { type: "ID", value: input };
+}
 
-  test("Entrada inválida começando com número", () => {
-    expect(afdIdentificador("123abc")).toBeNull();
-    expect(afdIdentificador("9var")).toBeNull();
-  });
-
-  test("Entrada com símbolo inválido", () => {
-    expect(afdIdentificador("$var")).toBeNull();
-    expect(afdIdentificador("var!")).toBeNull();
-  });
-
-  test("Vazio é inválido", () => {
-    expect(afdIdentificador("")).toBeNull();
-  });
-
-});
+console.log(afdIdentificador("teste"));   // { type: "ID", value: "teste" }
+console.log(afdIdentificador("if"));      // { type: "KW", value: "if" }
+console.log(afdIdentificador("123abc"));  // null
