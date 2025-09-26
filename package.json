@@ -1,0 +1,13 @@
+{
+  "name": "childev-compiler",
+  "version": "1.0.0",
+  "description": "Analisador Léxico e Sintático para a linguagem Childev",
+  "main": "analisador-lexico.js",
+  "type": "module",
+  "scripts": {
+    "start": "node analisador-lexico.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
