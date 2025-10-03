@@ -1,64 +1,42 @@
-# String Literal
+# AFN
+## q0n: AFD número ; q0s: AFD string literal ; q0i: AFD identificador ; q0d: AFD delimitador ; q0c: AFD comentário
 ```mermaid                           
 stateDiagram-v2
 
-[*] --> q0
-q0 --> q1: ["]
-q1 --> q1: [char, escape]
-q1 --> [*]
+[*] --> q0s
+q0s --> q1s: ["]
+q1s --> q1s: [char, escape]
+q1s --> [*]
+[*] --> q0n
+q0n --> q1n: [dígito]
+q1n --> q1n: [dígito]
+q0n --> q2n: [ . ]
+q1n --> q2n: [ . ]
+q1n --> q4n: [exp]
+q1n --> [*]
+q2n --> q4n: [exp]
+q2n --> q3n: [dígito]
+q3n --> q3n: [ . ]
+q3n --> [*]
+q4n --> q5n: [sinal]
+q4n --> q6n: [dígito]
+q5n --> q6n: [dígito]
+q6n --> q6n: [dígito]
+q6n --> [*]
+[*] --> q0i
+q0i --> q1i: [letra, _]
+q1i --> q1i: [letra, dígito, _]
+q1i --> [*]
+[*] --> q0d
+q0d --> q1d: [delmitador]
+q1d --> q1d: [delmitador]
+q1d --> [*]
+[*] --> q0c
+q0c --> q1c: [//]
+q1c --> q1c: [no escape]
+q1c --> [*]
+q0c --> q2c: [///]
+q2c --> q2c: [não repetiu ///]
+q2c --> [*]
 ```
 
-# Números
-```mermaid
-stateDiagram-v2
-[*] --> q0
-q0 --> q1: [dígito]
-q1 --> q1: [dígito]
-q0 --> q2: [ . ]
-q1 --> q2: [ . ]
-q1 --> q4: [exp]
-q1 --> [*]
-q2 --> q4: [exp]
-q2 --> q3: [dígito]
-q3 --> q3: [ . ]
-q3 --> [*]
-q4 --> q5: [sinal]
-q4 --> q6: [dígito]
-q5 --> q6: [dígito]
-q6 --> q6: [dígito]
-q6 --> [*]
-
-```
-
-# Identificadores
-```mermaid                           
-stateDiagram-v2
-
-[*] --> q0
-q0 --> q1: [letra, _]
-q1 --> q1: [letra, dígito, _]
-q1 --> [*]
-```
-
-# Delimitadores
-```mermaid                           
-stateDiagram-v2
-
-[*] --> q0
-q0 --> q1: [delmitador]
-q1 --> q1: [delmitador]
-q1 --> [*]
-```
-
-# Comentários
-```mermaid                           
-stateDiagram-v2
-
-[*] --> q0
-q0 --> q1: [//]
-q1 --> q1: [no escape]
-q1 --> [*]
-q0 --> q2: [///]
-q2 --> q2: [não repetiu ///]
-q2 --> [*]
-```
