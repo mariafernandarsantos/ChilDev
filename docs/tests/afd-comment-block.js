@@ -3,23 +3,23 @@ const { afdComentarioBloco } = require('./afdComentarioBloco');
 describe("AFD Comentário de Bloco", () => {
 
   test("Comentário de bloco simples", () => {
-    expect(afdComentarioBloco("/* bloco de comentário */")).toEqual({
+    expect(afdComentarioBloco("/// bloco de comentário ///")).toEqual({
       type: "COMMENT_BLOCK",
-      value: "/* bloco de comentário */"
+      value: "/// bloco de comentário ///"
     });
   });
 
   test("Comentário de bloco vazio", () => {
     expect(afdComentarioBloco("/**/")).toEqual({
       type: "COMMENT_BLOCK",
-      value: "/**/"
+      value: "//////"
     });
   });
 
   test("Comentário de bloco com múltiplas linhas", () => {
-    const input = `/* linha 1
+    const input = `/// linha 1
 linha 2
-linha 3 */`;
+linha 3 ///`;
     expect(afdComentarioBloco(input)).toEqual({
       type: "COMMENT_BLOCK",
       value: input
@@ -27,7 +27,7 @@ linha 3 */`;
   });
 
   test("Comentário de bloco com símbolos", () => {
-    const input = "/* !@#123 abc */";
+    const input = "/// !@#123 abc ///";
     expect(afdComentarioBloco(input)).toEqual({
       type: "COMMENT_BLOCK",
       value: input
@@ -37,20 +37,20 @@ linha 3 */`;
   // Casos inválidos
 
   test("Sem início de comentário", () => {
-    expect(afdComentarioBloco("bloco de comentário */")).toBeNull();
+    expect(afdComentarioBloco("bloco de comentário ///")).toBeNull();
   });
 
   test("Sem fim de comentário", () => {
-    expect(afdComentarioBloco("/* bloco de comentário")).toBeNull();
+    expect(afdComentarioBloco("/// bloco de comentário")).toBeNull();
   });
 
   test("Comentário de linha não deve ser aceito", () => {
     expect(afdComentarioBloco("// comentário de linha")).toBeNull();
   });
 
-  test("Comentário com apenas / e *", () => {
-    expect(afdComentarioBloco("/*")).toBeNull();
-    expect(afdComentarioBloco("*/")).toBeNull();
+  test("Comentário com apenas ///", () => {
+    expect(afdComentarioBloco("///")).toBeNull();
+    expect(afdComentarioBloco("///")).toBeNull();
   });
 
 });

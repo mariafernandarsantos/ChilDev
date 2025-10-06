@@ -28,7 +28,6 @@ Após executar o comando, você deverá ver no terminal a lista de tokens identi
   { type: 'IDENTIFIER', value: 'idade', line: 2 },
   { type: 'OPERATOR', value: '=', line: 2 },
   { type: 'LITERAL_INTEIRO', value: '10', line: 2 },
-  { type: 'DELIMITER', value: ';', line: 2 },
-  { type: 'EOF', value: 'EndOfFile', line: 3 }
+  { type: 'DELIMITER', value: ';', line: 2 }
 ]
 ```

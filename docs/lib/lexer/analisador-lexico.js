@@ -27,6 +27,7 @@ function analisadorLexico(codigo) {
   let ponteiro = 0;
   const tokens = [];
   let linha = 1;
+  let coluna = 1;
 
   const reconhecedores = [
     { tipo: "COMMENT_BLOCK", regex: regexComentarioBloco, ignora: true },
@@ -47,8 +48,12 @@ function analisadorLexico(codigo) {
       const espacoStr = espacos[0];
       ponteiro += espacoStr.length;
       const linhasQuebradas = espacoStr.match(/\n/g) || [];
+
       if (linhasQuebradas.length > 0) {
         linha += linhasQuebradas.length;
+        coluna = espacoStr.length - espacoStr.lastIndexOf('\n');
+      }else{
+        coluna += espacoStr.length;
       }
       continue;
     }
@@ -87,7 +92,16 @@ function analisadorLexico(codigo) {
             type: tipo,
             value: valorProcessado,
             line: linha,
+            column: coluna,
           });
+        }
+
+        const linhasNoToken = valorOriginal.match(/\n/g) || [];
+        if (linhasNoToken.length > 0) {
+          linha += linhasNoToken.length;
+          coluna = valorOriginal.length - valorOriginal.lastIndexOf('\n');
+        } else {
+          coluna += valorOriginal.length;
         }
 
         ponteiro += valorOriginal.length;
@@ -98,7 +112,7 @@ function analisadorLexico(codigo) {
 
     if (!matchEncontrado) {
       throw new Error(
-        `Erro Léxico: Caractere inesperado '${fatiaCodigo[0]}' na linha ${linha}`
+        `Opa! Não reconheci: '${fatiaCodigo[0]}' na linha ${linha}, coluna ${coluna}`
       );
     }
   }

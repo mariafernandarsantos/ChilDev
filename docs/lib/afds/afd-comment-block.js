@@ -1,8 +1,2 @@
-function afdComentarioBloco(input) {
-  if (/^\/\[\s\S]\*\/$/.test(input)) {
-    return { type: "COMMENT_BLOCK", value: input };
-  }
-  return null;
-}
+export const regexComentarioBloco = /^\/\/\/[\s\S]*?\/\/\//;
 
-console.log(afdComentarioBloco("/* bloco de comentário */")); 
