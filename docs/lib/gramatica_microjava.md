@@ -22,43 +22,58 @@ onde:
 ## Gramática em EBNF (Extended Backus–Naur Form)
 
 ```ebnf
-Program         = { VarDecl | FuncaoDecl } .
+Program       = "program" Ident ";" { ConstDecl | VarDecl } { MethodDecl } "}" .
 
-VarDecl         = "var" Type Ident { "," Ident } ";" .
-Type            = "inteiro" .
+ConstDecl     = "const" Type Ident "=" (Number | CharConst | BoolConst) ";" .
 
-FuncaoDecl      = "funcao" Ident "(" [ FormPars ] ")" Bloco .
-FormPars        = Type Ident { "," Type Ident } .
+VarDecl       = "var" Type Ident { "," Ident } ";" .
 
-Bloco           = "{" { VarDecl } { Statement } "}" .
+Type          = Ident .
 
-Statement       = (Ident ( "=" Expr | "(" [ ActPars ] ")" ) ";")
-                | ("se" "(" Condition ")" Statement [ "senao" Statement ])
-                | ("retorna" [ Expr ] ";")
-                | ("escreva" "(" [ ActPars ] ")" ";")
-                | Bloco
-                | ";" .
+MethodDecl    = "void" Ident "(" [ FormPars ] ")" 
+                 { VarDecl } 
+                 "{" { Statement } "}" .
 
-Condition       = Expr RelOp Expr .
-RelOp           = "==" | "!=" | ">" | ">=" | "<" | "<=" .
+FormPars      = Type Ident { "," Type Ident } .
 
-Expr            = [ "-" ] Term { AddOp Term } .
-AddOp           = "+" | "-" .
+Statement     = MatchedStmt | UnmatchedStmt .
 
-Term            = Factor { MulOp Factor } .
-MulOp           = "*" | "/" .
+MatchedStmt   = "if" "(" Condition ")" MatchedStmt "else" MatchedStmt
+              | Designator ( AssignOp Expr | "(" [ ActPars ] ")" | "++" | "--" ) ";"
+              | "while" "(" Condition ")" MatchedStmt
+              | "return" [ Expr ] ";"
+              | "read" "(" Designator ")" ";"
+              | "print" "(" Expr [ "," Number ] ")" ";"
+              | "{" { Statement } "}" 
+              | ";" .
+              
+UnmatchedStmt = "if" "(" Condition ")" Statement
+              | "if" "(" Condition ")" MatchedStmt "else" UnmatchedStmt .
 
-Factor          = Ident [ "(" [ ActParams ] ")" ]
-                | NumeroLiteral
-                | StringLiteral
-                | "(" Expr ")" .
+Designator    = Ident { "." Ident | "[" Expr "]" } .
 
-ActPars         = Expr { "," Expr } .
+ActPars       = Expr { "," Expr } .
 
-(* Terminais definidos pelo seu léxico *)
-Ident           = "Identificador (token)" .
-NumeroLiteral   = "Número (token)" .
-StringLiteral   = "String (token)" .
+Condition     = Expr RelOp Expr .
+
+RelOp         = "==" | "!=" | ">" | ">=" | "<" | "<=" .
+
+Expr          = [ "-" ] Term { AddOp Term } .
+
+AddOp         = "+" | "-" .
+
+Term          = Factor { MulOp Factor } .
+
+MulOp         = "*" | "/" | "%" .
+
+Factor        = Designator [ "(" [ ActPars ] ")" ] 
+              | Number 
+              | CharConst 
+              | BoolConst 
+              | "new" Type "[" Expr "]"
+              | "(" Expr ")" .
+
+AssignOp      = "=" .
 ```
 
 ---
@@ -66,76 +81,73 @@ StringLiteral   = "String (token)" .
 ## Gramática em BNF (Backus–Naur Form)
 
 ```bnf
-<Program>        ::= <DeclSeq>
-<DeclSeq>        ::= <VarDecl> <DeclSeq>
-                   | <FuncaoDecl> <DeclSeq>
-                   | ε
+<Program>        ::= "program" Ident ";" <DeclSeq> <MethodSeq>
+<DeclSeq>        ::= <Decl> <DeclSeq> | ε
+<Decl>           ::= <ConstDecl> | <VarDecl>
+<ConstDecl>      ::= "const" <Type> Ident "=" <Const> ";" 
+<Const>          ::= Number | CharConst | BoolConst
+<VarDecl>        ::= "var" <Type> Ident <VarDeclTail> ";"
+<VarDeclTail>    ::= "," Ident <VarDeclTail> | ε
+<Type>           ::= Ident
+<MethodSeq>      ::= <MethodDecl> <MethodSeq> | ε
+<MethodDecl>     ::= "void" Ident "(" <FormParsOpt> ")" <VarDeclSeq> <Block>
+<FormParsOpt>    ::= <FormPars> | ε
+<FormPars>       ::= <Type> Ident <FormParsTail>
+<FormParsTail>   ::= "," <Type> Ident <FormParsTail> | ε
+<VarDeclSeq>     ::= <VarDecl> <VarDeclSeq> | ε
+<Block>          ::= "{" <StatementSeq> "}"
+<StatementSeq>   ::= <Statement> <StatementSeq> | ε
 
-<VarDecl>        ::= "var" <Type> Ident <IdentList> ";"
-<IdentList>      ::= "," Ident <IdentList>
-                   | ε
-<Type>           ::= "inteiro"
+<Statement>      ::= <UnmatchedStmt>
+                   | <MatchedStmt>
 
-<FuncaoDecl>     ::= "funcao" Ident "(" <FormParsOpt> ")" <Bloco>
-<FormParsOpt>    ::= <FormPars>
-                   | ε
-<FormPars>       ::= <Type> Ident <FormParsTail>
-<FormParsTail>   ::= "," <Type> Ident <FormParsTail>
-                   | ε
+<OtherStmts>     ::= <DesignatorStmt>
+                   | "while" "(" <Condition> ")" <Statement>
+                   | "return" <ExprOpt> ";"
+                   | "read" "(" <Designator> ")" ";"
+                   | "print" "(" <Expr> <PrintOpt> ")" ";"
+                   | <Block>
+                   | ";" 
 
-<Bloco>          ::= "{" <VarDeclSeq> <StatementSeq> "}"
-<VarDeclSeq>     ::= <VarDecl> <VarDeclSeq>
-                   | ε
-<StatementSeq>   ::= <Statement> <StatementSeq>
-                   | ε
+<MatchedStmt>    ::= "if" "(" <Condition> ")" <MatchedStmt> "else" <MatchedStmt>
+                   | <OtherStmts>
 
-<Statement>      ::= <IdentStmt>
-                   | <SeStmt>
-                   | <RetornaStmt>
-                   | <EscrevaStmt>
-                   | <Bloco>
-                   | ";"
+<UnmatchedStmt>  ::= "if" "(" <Condition> ")" <Statement>
+                   | "if" "(" <Condition> ")" <MatchedStmt> "else" <UnmatchedStmt>
+                   
+<ExprOpt>        ::= <Expr> | ε
+<PrintOpt>       ::= "," Number | ε
 
-(* Resolve a ambiguidade de 'Ident' (atribuição ou chamada) *)
-<IdentStmt>      ::= Ident <IdentStmtTail> ";"
-<IdentStmtTail>  ::= "=" <Expr>
-                   | "(" <ActParsOpt> ")"
+<DesignatorStmt> ::= <Designator> <DesignatorStmtTail> ";"
 
-<SeStmt>         ::= "se" "(" <Condition> ")" <Statement> <SenaoPart>
-<SenaoPart>      ::= "senao" <Statement>
-                   | ε
+<DesignatorStmtTail> ::= "=" <Expr>
+                       | "(" <ActParsOpt> ")"
+                       | "++"
+                       | "--"
 
-<RetornaStmt>    ::= "retorna" <ExprOpt> ";"
-<ExprOpt>        ::= <Expr>
-                   | ε
+<Designator>     ::= Ident <DesignatorTail>
+<DesignatorTail> ::= "." Ident <DesignatorTail>
+              _    | "[" <Expr> "]" <DesignatorTail>
+                   | ε
+<ActParsOpt>     ::= <ActPars> | ε
+<ActPars>        ::= <Expr> <ActParsTail>
+<ActParsTail>    ::= "," <Expr> <ActParsTail> | ε
+<Condition>      ::= <Expr> <RelOp> <Expr>
+<RelOp>          ::= "==" | "!=" | ">" | ">=" | "<" | "<="
+<Expr>           ::= <Term> <ExprTail> | "-" <Term> <ExprTail>
+<ExprTail>       ::= <AddOp> <Term> <ExprTail> | ε
+<AddOp>          ::= "+" | "-"
+<Term>           ::= <Factor> <TermTail>
+<TermTail>       ::= <MulOp> <Factor> <TermTail> | ε
+<MulOp>          ::= "*" | "/" | "%"
 
-<EscrevaStmt>    ::= "escreva" "(" <ActParsOpt> ")" ";"
+<Factor>         ::= <Designator> <FactorTail>
+                   | Number
+                   | CharConst
+                   | BoolConst
+                   | "new" <Type> "[" <Expr> "]"
+                   | "(" <Expr> ")"
 
-<ActParsOpt>     ::= <ActPars>
-                   | ε
-<ActPars>        ::= <Expr> <ActParsTail>
-<ActParsTail>    ::= "," <Expr> <ActParsTail>
-                   | ε
-
-<Condition>      ::= <Expr> <RelOp> <Expr>
-<RelOp>          ::= "==" | "!=" | ">" | ">=" | "<" | "<="
-
-<Expr>           ::= <Term> <ExprTail>
-                   | "-" <Term> <ExprTail>
-<ExprTail>       ::= <AddOp> <Term> <ExprTail>
-                   | ε
-<AddOp>          ::= "+" | "-"
-
-<Term>           ::= <Factor> <TermTail>
-<TermTail>       ::= <MulOp> <Factor> <TermTail>
-                   | ε
-<MulOp>          ::= "*" | "/"
-
-(* Resolve a ambiguidade de 'Ident' (variável ou chamada) em expressões *)
-<Factor>         ::= Ident <FactorTail>
-                   | <NumeroLiteral>
-                   | <StringLiteral>
-                   | "(" <Expr> ")"
 <FactorTail>     ::= "(" <ActParsOpt> ")"
                    | ε
 ```
