@@ -148,5 +148,5 @@ const afn = new AFN(estados, alfabeto, transicoes, "qStart", finais);
 // Converte para AFD
 const afd = afn.construirAFD();
 
-console.log("✅ AFD GERADO A PARTIR DO AFN:");
+console.log(" AFD GERADO A PARTIR DO AFN:");
 console.log(JSON.stringify(afd, null, 2));

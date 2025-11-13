@@ -1,4 +1,5 @@
-import * as AST from '../ast/ast.js';;
+// arquivo: parser/descendente/parser.js
+import * as AST from '../ast/ast.js';
 
 // Exceção customizada para erros de parsing
 class ErroParser extends Error {
@@ -17,15 +18,9 @@ export class Parser {
     this.mensagensErro = [];
   }
 
-  //  Métodos Utilitários 
-
   /** Retorna o token atual sem consumi-lo */
   peek() {
-    if (this.fimDaEntrada()) {
-      // Retorna um token EOF virtual se acabarem os tokens
-      const ultimo = this.tokens[this.tokens.length - 1];
-      return { type: 'EOF', value: '', linha: ultimo?.linha || 1, coluna: ultimo?.coluna || 1 };
-    }
+    // O léxico deve sempre fornecer um token EOF no final
     return this.tokens[this.posicaoAtual];
   }
 
@@ -44,13 +39,16 @@ export class Parser {
 
   /** Verifica se chegamos ao fim da entrada */
   fimDaEntrada() {
-    return this.posicaoAtual >= this.tokens.length;
+    // O léxico agora fornece um 'EOF', então verificamos por ele
+    return this.peek().type === 'EOF';
   }
 
   /** Verifica se o token atual é dos tipos especificados */
   verificar(tipo, valor = null) {
     if (this.fimDaEntrada()) return false;
     const token = this.peek();
+    
+    // CORREÇÃO: Usamos .type e .value
     if (token.type !== tipo) return false;
     if (valor !== null && token.value !== valor) return false;
     return true;
@@ -83,8 +81,6 @@ export class Parser {
     throw this.erroParser(this.peek(), mensagemErro);
   }
 
-  //  Tratamento de Erros 
-
   erroParser(token, mensagem) {
     this.reportarErro(token, mensagem);
     return new ErroParser(mensagem);
@@ -95,6 +91,7 @@ export class Parser {
     this.teveErro = true;
     this.modoPanico = true;
 
+    // Usamos .line, .column e .value (inglês)
     let localizacao = `Linha ${token.line}, coluna ${token.column}`;
     let mensagemCompleta = `Erro [${localizacao}]: ${mensagem}`;
 
@@ -111,23 +108,26 @@ export class Parser {
   sincronizar() {
     this.advance();
     while (!this.fimDaEntrada()) {
+      // Usamos .type e .value
       if (this.anterior().type === 'DELIMITER' && this.anterior().value === ';') {
         return;
       }
-      // Palavras-chave que iniciam novas declarações/comandos
-      switch (this.peek().value) {
-        case 'funcao':
-        case 'var':
-        case 'se':
-        case 'retorna':
-        case 'escreva':
-          return;
+      
+      const token = this.peek();
+      // Usamos .type e .value
+      if (token.type === 'KEYWORD') {
+          switch (token.value) {
+            case 'funcao':
+            case 'var':
+            case 'se':
+            case 'retorna':
+            case 'escreva':
+              return;
+          }
       }
       this.advance();
     }
   }
-
-  //  Ponto de Entrada 
 
   /** Parseia o programa completo: <Program> ::= <DeclSeq> */
   parsearPrograma() {
@@ -146,22 +146,30 @@ export class Parser {
     return new AST.NodoPrograma(declaracoes);
   }
 
-  //  Declarações 
-
   /** Parseia uma declaração: <Decl> ::= <VarDecl> | <FuncaoDecl> | <Statement> */
   parsearDeclaracao() {
     this.modoPanico = false;
     
-    if (this.verificar('KEYWORD', 'var')) {
-      return this.parsearDeclaracaoVariavel(); // <VarDecl>
+    try {
+        if (this.verificar('KEYWORD', 'var')) {
+        return this.parsearDeclaracaoVariavel(); // <VarDecl>
+        }
+        if (this.verificar('KEYWORD', 'funcao')) {
+        return this.parsearDeclaracaoFuncao(); // <FuncaoDecl>
+        }
+        
+        // Se não é uma declaração, deve ser um comando
+        return this.parsearComando(); // <Statement>
+
+    } catch (e) {
+        if (e instanceof ErroParser) {
+            this.sincronizar();
+            return new AST.NodoErro(); // Retorna um nó de erro para continuar
+        } else {
+            throw e; // Lança erros inesperados
+        }
     }
-    if (this.verificar('KEYWORD', 'funcao')) {
-      return this.parsearDeclaracaoFuncao(); // <FuncaoDecl>
     }
-    
-    // Se não é 'var' ou 'funcao', é um comando
-    return this.parsearComando(); // <Statement>
-  }
 
   /** <VarDecl> ::= "var" <Type> Ident [ "=" <Expr> ] ";" */
   parsearDeclaracaoVariavel() {
@@ -208,8 +216,6 @@ export class Parser {
     return parametros;
   }
 
-  //  Comandos 
-
   /** <Bloco> ::= "{" <VarDeclSeq> <StatementSeq> "}" */
   parsearBloco() {
     const chaveEsq = this.consumir('DELIMITER', '{', "Esperado '{' para iniciar bloco.");
@@ -234,25 +240,36 @@ export class Parser {
   parsearComando() {
     const linha = this.peek().line;
 
-    if (this.match('KEYWORD', 'se')) {
-      return this.parsearComandoSe(linha);
+    // Verifica o tipo de token ANTES de consumi-lo
+    if (this.verificar('KEYWORD', 'se')) {
+        this.advance(); // Consome o 'se'
+        return this.parsearComandoSe(linha);
     }
-    if (this.match('KEYWORD', 'retorna')) {
-      return this.parsearComandoRetorna(linha);
+    if (this.verificar('KEYWORD', 'retorna')) {
+        this.advance(); // Consome o 'retorna'
+        return this.parsearComandoRetorna(linha);
     }
-    if (this.match('KEYWORD', 'escreva')) {
-      return this.parsearComandoEscreva(linha);
+    if (this.verificar('KEYWORD', 'escreva')) {
+        this.advance(); // Consome o 'escreva'
+        return this.parsearComandoEscreva(linha);
     }
-    if (this.match('DELIMITER', '{')) {
-      return this.parsearBloco(); // Já consome '{'
+    if (this.verificar('DELIMITER', '{')) {
+        // parsearBloco consome o '{' por si só
+        return this.parsearBloco(); 
     }
-    if (this.match('DELIMITER', ';')) {
-      return new AST.NodoComandoVazio(linha);
+    if (this.verificar('DELIMITER', ';')) {
+        this.advance(); // Consome o ';'
+        return new AST.NodoComandoVazio(linha);
+    }
+    // Só tentamos parsear um comando de identificador
+    // se o token FOR um identificador.
+    if (this.verificar('IDENTIFIER')) {
+        return this.parsearComandoIdentificador(linha);
     }
 
-    // Se não for nenhum dos anteriores, deve ser <IdentStmt>
-    return this.parsearComandoIdentificador(linha);
-  }
+    // Se não for nada disso, é um erro.
+    throw this.erroParser(this.peek(), "Esperado início de um comando (ex: 'se', 'escreva', identificador, etc).");
+    }
 
   /** <IdentStmt> ::= Ident <IdentStmtTail> ";" */
   parsearComandoIdentificador(linha) {
@@ -263,7 +280,9 @@ export class Parser {
     if (this.match('OPERATOR', '=')) {
       // Atribuição: Ident "=" <Expr>
       const valor = this.parsearExpressao();
-      comando = new AST.NodoExpressaoAtribuicao(nome, valor, linha);
+      const atribuicao = new AST.NodoExpressaoAtribuicao(nome, valor, linha);
+      comando = new AST.NodoComandoExpressao(atribuicao, linha);
+
     } else if (this.match('DELIMITER', '(')) {
       // Chamada de função: Ident "(" <ActParsOpt> ")"
       const args = this.parsearArgumentos();
@@ -334,14 +353,9 @@ export class Parser {
     }
     return argumentos;
   }
-  
-  //  Expressões (Hierarquia de Precedência) 
 
   /** <Condition> ::= <Expr> <RelOp> <Expr> */
   parsearCondicao() {
-    // Na sua gramática, Condition é Expr RelOp Expr.
-    // O template do Dart tem uma hierarquia mais complexa (OU, E, etc.)
-    // Vamos implementar a da sua gramática:
     const esquerda = this.parsearExpressao();
     
     if (this.verificarMultiplos([
@@ -353,9 +367,6 @@ export class Parser {
       return new AST.NodoExpressaoBinaria(esquerda, operador, direita, operador.line);
     }
     
-    // Se não for uma RelOp, é apenas uma expressão (ex: if(variavel))
-    // Embora a gramática estrita não permita, a maioria das linguagens sim.
-    // Vamos manter a simplicidade da gramática:
     throw this.erroParser(this.peek(), "Esperado um operador relacional (==, !=, >, etc.) na condição.");
   }
 
