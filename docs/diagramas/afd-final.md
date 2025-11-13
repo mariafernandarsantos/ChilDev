@@ -1,3 +1,4 @@
+```mermaid   
 stateDiagram-v2
 [*] --> q0c_q0d_q0i_q0n_q0s_qStart
 
@@ -45,3 +46,4 @@ q1c --> [*]
 
 q2c --> q2c: [ não repetiu /// ]
 q2c --> [*]
+```
