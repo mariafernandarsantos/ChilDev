@@ -18,3 +18,11 @@ export class ErroRetorno extends Error {
     this.name = "ErroRetorno";
   }
 }
+
+export class ErroSemantico extends Error {
+  constructor(mensagem, linha) {
+    super(mensagem);
+    this.linha = linha;
+    this.name = "ErroSemantico";
+  }
+}

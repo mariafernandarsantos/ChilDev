@@ -1,9 +1,6 @@
 import { analisadorLexico } from './docs/lib/lexer/analisador-lexico.js'; 
-
 import { Parser } from './docs/lib/parser/descendente/parser.js';
-
-import { Interpretador } from './docs/lib/codegen/interpretador.js';
-
+import { AnalisadorSemantico } from './docs/lib/semantica/analisador-semantico.js';
 import fs from 'fs';
 
 function main() {
@@ -33,7 +30,7 @@ function main() {
     escreva("Outro teste:", (10 + 2) * 3);
   `;
   
-  // 1. Léxico
+  // 1. Fase Léxica
   let tokens;
   try {
     tokens = analisadorLexico(codigoFonte);
@@ -42,7 +39,7 @@ function main() {
     return;
   }
   
-  // 2. Parser
+  // 2. Fase Parser
   const parser = new Parser(tokens);
   const ast = parser.parsearPrograma();
 
@@ -51,10 +48,15 @@ function main() {
     return;
   }
   
-  // 3. Interpretador
-  const interpretador = new Interpretador();
-  console.log("Executando interpretador...");
-  interpretador.interpretar(ast);
+  // 3. Fase Semântica 
+  const analisador = new AnalisadorSemantico();
+  const passouNaAnalise = analisador.analisar(ast);
+  
+  if (!passouNaAnalise) {
+      console.error("Erros Semânticos encontrados. Abortando.");
+      return;
+  }
 }
 
+// Executa
 main();
