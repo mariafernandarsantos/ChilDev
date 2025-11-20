@@ -1,7 +1,4 @@
-// arquivo: parser/descendente/parser.js
 import * as AST from '../ast/ast.js';
-
-// Exceção customizada para erros de parsing
 class ErroParser extends Error {
   constructor(mensagem) {
     super(mensagem);
@@ -48,7 +45,6 @@ export class Parser {
     if (this.fimDaEntrada()) return false;
     const token = this.peek();
     
-    // CORREÇÃO: Usamos .type e .value
     if (token.type !== tipo) return false;
     if (valor !== null && token.value !== valor) return false;
     return true;
@@ -91,7 +87,6 @@ export class Parser {
     this.teveErro = true;
     this.modoPanico = true;
 
-    // Usamos .line, .column e .value (inglês)
     let localizacao = `Linha ${token.line}, coluna ${token.column}`;
     let mensagemCompleta = `Erro [${localizacao}]: ${mensagem}`;
 
@@ -108,13 +103,11 @@ export class Parser {
   sincronizar() {
     this.advance();
     while (!this.fimDaEntrada()) {
-      // Usamos .type e .value
       if (this.anterior().type === 'DELIMITER' && this.anterior().value === ';') {
         return;
       }
       
       const token = this.peek();
-      // Usamos .type e .value
       if (token.type === 'KEYWORD') {
           switch (token.value) {
             case 'funcao':
@@ -188,52 +181,87 @@ export class Parser {
 
   /** <Type> ::= "inteiro" */
   parsearTipo() {
-    return this.consumir('KEYWORD', 'inteiro', "Esperado tipo 'inteiro'.");
+    let tokenBase;
+    
+    // Verifica qual é o tipo primitivo
+    if (this.verificar('KEYWORD', 'inteiro')) tokenBase = this.advance();
+    else if (this.verificar('KEYWORD', 'decimal')) tokenBase = this.advance(); 
+    else if (this.verificar('KEYWORD', 'string')) tokenBase = this.advance();
+    else if (this.verificar('KEYWORD', 'void')) tokenBase = this.advance();
+    else {
+      throw this.erroParser(this.peek(), "Esperado tipo (inteiro, decimal, string ou void).");
+    }
+
+    // Verifica se é array (ex: inteiro[])
+    let nomeTipo = tokenBase.value;
+    while (this.match('DELIMITER', '[')) {
+      this.consumir('DELIMITER', ']', "Esperado ']' após '[' na declaração de tipo.");
+      nomeTipo += "[]";
+    }
+
+    return { 
+      type: 'TYPE_DEF', 
+      value: nomeTipo, 
+      line: tokenBase.line, 
+      column: tokenBase.column 
+    };
   }
 
-  /** <FuncaoDecl> ::= "funcao" Ident "(" <FormParsOpt> ")" <Bloco> */
+/** <FuncaoDecl> ::= "funcao" Ident "(" <FormParsOpt> ")" ":" <Type> <Bloco> */
   parsearDeclaracaoFuncao() {
     const palavraChave = this.consumir('KEYWORD', 'funcao', "Esperado 'funcao'.");
     const nome = this.consumir('IDENTIFIER', null, "Esperado nome da função.");
+    
     this.consumir('DELIMITER', '(', "Esperado '(' após nome da função.");
     const parametros = this.parsearParametros();
     this.consumir('DELIMITER', ')', "Esperado ')' após parâmetros.");
+    
+    // Consome ':' e o Tipo de Retorno 
+    this.consumir('DELIMITER', ':', "Esperado ':' para especificar o tipo de retorno.");
+    const tipoRetorno = this.parsearTipo(); // Reutiliza a lógica que lê 'inteiro'
+
     const corpo = this.parsearBloco();
     
-    return new AST.NodoDeclaracaoFuncao(nome, parametros, corpo, palavraChave.line);
+    return new AST.NodoDeclaracaoFuncao(nome, parametros, tipoRetorno, corpo, palavraChave.line);
   }
 
   /** <FormParsOpt> ::= <FormPars> | ε */
   parsearParametros() {
     const parametros = [];
-    if (this.verificar('KEYWORD', 'inteiro')) { // Início de <FormPars>
+    
+    const proximo = this.peek();
+    const ehTipo = proximo.type === 'KEYWORD' && 
+                   ['inteiro', 'decimal', 'string', 'void'].includes(proximo.value);
+
+    if (ehTipo) { 
       do {
         const tipo = this.parsearTipo();
         const nome = this.consumir('IDENTIFIER', null, "Esperado nome do parâmetro.");
         parametros.push(new AST.Parametro(tipo, nome));
-      } while (this.match('DELIMITER', ',')); // <FormParsTail>
+      } while (this.match('DELIMITER', ',')); 
     }
+    
     return parametros;
   }
 
   /** <Bloco> ::= "{" <VarDeclSeq> <StatementSeq> "}" */
   parsearBloco() {
     const chaveEsq = this.consumir('DELIMITER', '{', "Esperado '{' para iniciar bloco.");
-    const declaracoes = [];
-    const comandos = [];
+    
+    const instrucoes = [];
 
-    // <VarDeclSeq>
-    while (this.verificar('KEYWORD', 'var')) {
-      declaracoes.push(this.parsearDeclaracaoVariavel());
-    }
-
-    // <StatementSeq>
     while (!this.verificar('DELIMITER', '}') && !this.fimDaEntrada()) {
-      comandos.push(this.parsearComando());
+      if (this.verificar('KEYWORD', 'var')) {
+        instrucoes.push(this.parsearDeclaracaoVariavel());
+      } else {
+        instrucoes.push(this.parsearComando());
+      }
     }
 
     this.consumir('DELIMITER', '}', "Esperado '}' para fechar bloco.");
-    return new AST.NodoComandoBloco(declaracoes, comandos, chaveEsq.line);
+    
+    // Passa a lista unificada
+    return new AST.NodoComandoBloco(instrucoes, chaveEsq.line);
   }
 
   /** <Statement> ::= <IdentStmt> | <SeStmt> | <RetornaStmt> | <EscrevaStmt> | <Bloco> | ";" */

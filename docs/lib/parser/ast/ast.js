@@ -25,11 +25,12 @@ export class NodoDeclaracao extends NodoAST {
 }
 
 export class NodoDeclaracaoFuncao extends NodoDeclaracao {
-  constructor(nome, parametros, corpo, linha) {
+  constructor(nome, parametros, tipoRetorno, corpo, linha) {
     super(linha);
-    this.nome = nome; // Token (Identificador)
+    this.nome = nome;       // Token (Identificador)
     this.parametros = parametros; // Array de Parametro
-    this.corpo = corpo; // NodoComandoBloco
+    this.tipoRetorno = tipoRetorno; // Token (Keyword, ex: 'inteiro')
+    this.corpo = corpo;     // NodoComandoBloco
   }
   aceitar(visitor) { return visitor.visitarDeclaracaoFuncao(this); }
 }
@@ -94,10 +95,9 @@ export class NodoComandoEscreva extends NodoComando {
 }
 
 export class NodoComandoBloco extends NodoComando {
-  constructor(declaracoes, comandos, linha) {
+  constructor(instrucoes, linha) {
     super(linha);
-    this.declaracoes = declaracoes; // Array de NodoDeclaracaoVariavel
-    this.comandos = comandos; // Array de NodoComando
+    this.instrucoes = instrucoes; // Array misto de Declarações e Comandos
   }
   aceitar(visitor) { return visitor.visitarComandoBloco(this); }
 }

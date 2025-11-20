@@ -1,14 +1,19 @@
 const regexComentarioBloco = /^\/\/\/[\s\S]*?\/\/\//;
 const regexComentarioLinha = /^\/\/.*/;
+
 const regexString = /^"(.*?)"/;
+
 const regexNumero = /^[0-9]+(\.[0-9]+)?([eE][+-]?[0-9]+)?/;
+
+// Apenas letras a-z, A-Z e underscore no início
+// Sem a flag 'u' e sem \p{L}
 const regexIdentificador = /^[a-zA-Z_][a-zA-Z0-9_]*/;
+// ----------------------------------------
 
 const regexDelimOp = /^(==|!=|>=|<=|[=+\-*/><(){};,:.])/; 
 
-// --- 2. Conjuntos para Pós-processamento ---
 const palavrasChave = new Set([
-  "var", "inteiro", "se", "senao", "escreva", "retorna", "funcao"
+  "var", "inteiro", "decimal", "string", "void", "se", "senao", "escreva", "retorna", "funcao"
 ]);
 
 const operadores = new Set([
@@ -18,10 +23,10 @@ const operadores = new Set([
 const reconhecedores = [
   { tipo: 'COMMENT_BLOCK', regex: regexComentarioBloco, ignora: true },
   { tipo: 'COMMENT_LINE', regex: regexComentarioLinha, ignora: true },
-  { tipo: 'LITERAL_STRING', regex: regexString, processa: (val) => val.slice(1, -1) }, // Remove aspas
-  { tipo: 'LITERAL_DECIMAL', regex: regexNumero }, // O parser trata tudo como float
-  { tipo: 'IDENTIFIER', regex: regexIdentificador }, // Será reclassificado
-  { tipo: 'DELIMITER_OP', regex: regexDelimOp } // Será reclassificado
+  { tipo: 'LITERAL_STRING', regex: regexString, processa: (val) => val.slice(1, -1) },
+  { tipo: 'LITERAL_DECIMAL', regex: regexNumero },
+  { tipo: 'IDENTIFIER', regex: regexIdentificador },
+  { tipo: 'DELIMITER_OP', regex: regexDelimOp }
 ];
 
 export function analisadorLexico(codigo) {
@@ -31,12 +36,10 @@ export function analisadorLexico(codigo) {
   let ponteiro = 0;
 
   while (ponteiro < codigo.length) {
-    // Ignora espaços em branco
     let espacos = codigo.substring(ponteiro).match(/^\s+/);
     if (espacos) {
       const espacoStr = espacos[0];
       ponteiro += espacoStr.length;
-
       const linhasQuebradas = espacoStr.match(/\n/g) || [];
       if (linhasQuebradas.length > 0) {
         linha += linhasQuebradas.length;
@@ -47,7 +50,6 @@ export function analisadorLexico(codigo) {
       continue;
     }
 
-    // Tenta encontrar um token
     let matchEncontrado = false;
     const fatiaCodigo = codigo.substring(ponteiro);
 
@@ -59,45 +61,35 @@ export function analisadorLexico(codigo) {
         let valorProcessado = valorOriginal;
         let tipoToken = rec.tipo;
 
-        // Pós-processamento
-        if (rec.processa) {
-          valorProcessado = rec.processa(valorOriginal);
-        }
+        if (rec.processa) valorProcessado = rec.processa(valorOriginal);
 
-        // Reclassifica IDENTIFIER -> KEYWORD
         if (tipoToken === 'IDENTIFIER') {
           if (palavrasChave.has(valorOriginal)) {
             tipoToken = 'KEYWORD';
           }
-        }
-        
-        // Reclassifica DELIMITER_OP -> OPERATOR ou DELIMITER
+        } 
         else if (tipoToken === 'DELIMITER_OP') {
           if (operadores.has(valorOriginal)) {
-            tipoToken = 'OPERATOR';
+             tipoToken = 'OPERATOR';
           } else {
-            tipoToken = 'DELIMITER'; // É '(', ';', ':', etc.
+             tipoToken = 'DELIMITER';
           }
         }
-        
-        // Reclassifica Número
         else if (tipoToken === 'LITERAL_DECIMAL') {
             if (!valorOriginal.includes('.') && !valorOriginal.includes('e') && !valorOriginal.includes('E')) {
                 tipoToken = 'LITERAL_INTEIRO';
             }
         }
 
-        // Adiciona o token (se não for ignorado)
         if (!rec.ignora) {
           tokens.push({
-            type: tipoToken,
+            type: tipoToken, 
             value: valorProcessado,
             line: linha,
             column: coluna
           });
         }
 
-        // Atualiza posição (linha e coluna)
         const linhasNoToken = valorOriginal.match(/\n/g) || [];
         if (linhasNoToken.length > 0) {
           linha += linhasNoToken.length;
@@ -108,24 +100,15 @@ export function analisadorLexico(codigo) {
 
         ponteiro += valorOriginal.length;
         matchEncontrado = true;
-        break; // Passa para a próxima iteração do while
+        break;
       }
     }
 
     if (!matchEncontrado) {
-      throw new Error(
-        `Opa! Não reconheci: '${fatiaCodigo[0]}' na linha ${linha}, coluna ${coluna}`
-      );
+      throw new Error(`Erro Léxico: Caractere inválido ou não reconhecido '${fatiaCodigo[0]}' na linha ${linha}, coluna ${coluna}`);
     }
   }
 
-  // Adiciona token de Fim de Arquivo (EOF)
-  tokens.push({
-    type: "EOF",
-    value: "",
-    line: linha,
-    column: coluna
-  });
-
+  tokens.push({ type: "EOF", value: "", line: linha, column: coluna });
   return tokens;
 }
